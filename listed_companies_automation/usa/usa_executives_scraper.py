@@ -4,7 +4,7 @@ import mysql.connector
 import time
 from requests.exceptions import ChunkedEncodingError
 
-# Database connection for the source (usa_companies_final) and target (Key_people_info)
+# Database connection for the source (usa_companies_final) 
 db_source = mysql.connector.connect(
     host="localhost",  # Replace with your DB host
     user="root",       # Replace with your DB username
@@ -12,6 +12,7 @@ db_source = mysql.connector.connect(
     database="usa"  # Replace with your source DB name
 )
 
+# Database connection for the target (salt_lake_key_people_info)
 db_target = mysql.connector.connect(
     host="localhost",  # Replace with your DB host
     user="root",       # Replace with your DB username
@@ -22,16 +23,17 @@ db_target = mysql.connector.connect(
 cursor_source = db_source.cursor()
 cursor_target = db_target.cursor()
 
-# Query to fetch tickers and company names where the city is Palo Alto
+# Query to fetch tickers and company names where the city is Salt Lake
 query = """
-    SELECT `NAME`, Symbol FROM usa_companies_final;
+    SELECT `NAME`, Symbol FROM usa_companies_final
+    WHERE city = "Salt Lake City";
     """
 cursor_source.execute(query)
 companies = cursor_source.fetchall()
 
 # Create table if not exists in target database
 create_table_query = """
-CREATE TABLE IF NOT EXISTS Key_people_info (
+CREATE TABLE IF NOT EXISTS salt_lake_key_people_info (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     company_name VARCHAR(100),
     Ticker VARCHAR(10),
@@ -46,6 +48,7 @@ url_template = "https://finance.yahoo.com/quote/{}/profile/"
 
 # Retry function with delay
 def fetch_data_with_retry(url, headers, retries=3, delay=5):
+    """Fetching data from given source"""
     for attempt in range(retries):
         try:
             response = requests.get(url, headers=headers, timeout=10)  # Adding a timeout to prevent waiting too long
@@ -71,14 +74,22 @@ for index, company in enumerate(companies, start=1):
     print(f"Scraping data for ticker: {ticker} ({company_name})")
 
     # Set User-Agent to mimic browser
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Cache-Control': 'max-age=0'
+    }
 
     response = fetch_data_with_retry(url, headers)
 
     if response:
         soup = BeautifulSoup(response.content, 'html.parser')
         # Locate the table containing the executives' data
-        table = soup.find('div', class_='table-container yf-mj92za')
+        table = soup.find('div', class_='table-container yf-1tqxvla')
 
         if table:
             rows = table.find_all('tr')  # Get all rows in the table
@@ -90,7 +101,7 @@ for index, company in enumerate(companies, start=1):
 
                     # Insert data into database
                     insert_query = """
-                    INSERT INTO Key_people_info (company_name, Ticker, Designation, Person_Name)
+                    INSERT INTO salt_lake_key_people_info (company_name, Ticker, Designation, Person_Name)
                     VALUES (%s, %s, %s, %s)
                     """
                     cursor_target.execute(insert_query, (company_name, ticker, designation, person_name))
