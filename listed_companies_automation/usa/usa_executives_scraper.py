@@ -26,14 +26,14 @@ cursor_target = db_target.cursor()
 # Query to fetch tickers and company names where the city is Salt Lake
 query = """
     SELECT `NAME`, Symbol FROM usa_companies_final
-    WHERE city = "Salt Lake City";
+    WHERE city = "Philadelphia";
     """
 cursor_source.execute(query)
 companies = cursor_source.fetchall()
 
 # Create table if not exists in target database
 create_table_query = """
-CREATE TABLE IF NOT EXISTS salt_lake_key_people_info (
+CREATE TABLE IF NOT EXISTS Philadelphia_key_people_info (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     company_name VARCHAR(100),
     Ticker VARCHAR(10),
@@ -101,7 +101,7 @@ for index, company in enumerate(companies, start=1):
 
                     # Insert data into database
                     insert_query = """
-                    INSERT INTO salt_lake_key_people_info (company_name, Ticker, Designation, Person_Name)
+                    INSERT INTO Philadelphia_key_people_info (company_name, Ticker, Designation, Person_Name)
                     VALUES (%s, %s, %s, %s)
                     """
                     cursor_target.execute(insert_query, (company_name, ticker, designation, person_name))
