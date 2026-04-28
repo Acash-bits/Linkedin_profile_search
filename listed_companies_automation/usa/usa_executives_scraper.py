@@ -23,17 +23,19 @@ db_target = mysql.connector.connect(
 cursor_source = db_source.cursor()
 cursor_target = db_target.cursor()
 
+location_name = "Pennsylvania"
+
 # Query to fetch tickers and company names where the city is Salt Lake
 query = """
     SELECT `NAME`, Symbol FROM usa_companies_final
-    WHERE city = "Philadelphia";
+    WHERE STATE = "Pennsylvania" AND city != "philadelphia";
     """
 cursor_source.execute(query)
 companies = cursor_source.fetchall()
 
 # Create table if not exists in target database
-create_table_query = """
-CREATE TABLE IF NOT EXISTS Philadelphia_key_people_info (
+create_table_query = f"""
+CREATE TABLE IF NOT EXISTS {location_name}_key_people_info (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     company_name VARCHAR(100),
     Ticker VARCHAR(10),
@@ -100,8 +102,8 @@ for index, company in enumerate(companies, start=1):
                     designation = cols[1].get_text(strip=True)
 
                     # Insert data into database
-                    insert_query = """
-                    INSERT INTO Philadelphia_key_people_info (company_name, Ticker, Designation, Person_Name)
+                    insert_query = f"""
+                    INSERT INTO {location_name}_key_people_info (company_name, Ticker, Designation, Person_Name)
                     VALUES (%s, %s, %s, %s)
                     """
                     cursor_target.execute(insert_query, (company_name, ticker, designation, person_name))
